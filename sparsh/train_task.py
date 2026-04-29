@@ -29,7 +29,7 @@ from model.tactile_mae import TactileVideoMAE
 import copy
 
 logger = get_pylogger(__name__)
-os.environ["WANDB_BASE_URL"] = "https://api.bandw.top"
+# os.environ["WANDB_BASE_URL"] = "https://api.bandw.top"
 
 # Maps sensor name strings to integer indices used by TactileVideoMAE's sensor_token
 _SENSOR_TYPE_MAP = {"digit": 1, "gelsight": 3}
@@ -89,7 +89,7 @@ def load_model_from_clip(ckpt, model):
 def init_wandb(cfg: DictConfig):
     wandb.init(
         project=cfg.project,
-        entity=cfg.entity,
+        # entity=cfg.entity,
         dir=cfg.save_dir,
         id=f"{cfg.id}_{get_local_rank()}",
         group=cfg.group,
