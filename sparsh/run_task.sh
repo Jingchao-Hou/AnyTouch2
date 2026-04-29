@@ -1,7 +1,29 @@
 #!/bin/bash
+#SBATCH --job-name=sparsh_force
+#SBATCH --partition=gpua
+#SBATCH --gres=gpu:1
+#SBATCH --cpus-per-task=32
+#SBATCH --time=12:00:00
+#SBATCH --output=/fastwork/jhou/AnyTouch2/logs/%x_%j.out
+#SBATCH --error=/fastwork/jhou/AnyTouch2/logs/%x_%j.err
+
+echo "Running on:"
+hostname
+
+echo "GPU status:"
+nvidia-smi
+
+echo "Activating conda environment..."
 
 source ~/.bashrc
 conda activate anytouch2
+
+echo "Python path:"
+which python
+
+echo "Working directory setup..."
+
+cd /fastwork/jhou/AnyTouch2/sparsh
 
 ### EXPERIMENT: force/gelsight_anytouch, force/digit_anytouch, pose/digit_anytouch, slip/digit_anytouch, slip/gelsight_anytouch
 EXPERIMENT=force/gelsight_anytouch
