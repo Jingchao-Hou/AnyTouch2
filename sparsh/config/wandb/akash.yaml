@@ -1,4 +1,4 @@
-project: train_gelsight
+project: Train_${experiment_name}
 # entity: fengruoxuan-renmin-university-of-china
 save_dir: ${paths.output_dir}
 id: ${hydra:job.id}_${experiment_name} # Pass correct id to resume a run

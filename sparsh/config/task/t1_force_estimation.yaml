@@ -15,7 +15,7 @@ hydra:
     dir: ${paths.log_dir}/${hydra.job.id}_${experiment_name}
     
 wandb:
-  project: ${task_name}_${sensor}
+  project: Train_${experiment_name}_${task_name}_${sensor}
   group: ~
   tags: ["${ssl_name}"]
 
