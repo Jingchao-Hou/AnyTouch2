@@ -1,3 +1,5 @@
+#!/bin/bash
+
 ### EXPERIMENT: force/gelsight_anytouch, force/digit_anytouch, pose/digit_anytouch, slip/digit_anytouch, slip/gelsight_anytouch
 EXPERIMENT=force/gelsight_anytouch
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
