@@ -14,6 +14,7 @@ import datetime
 import json
 import time
 import copy
+import wandb
 
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
@@ -75,15 +76,22 @@ def main(args):
         dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=False
     )
 
-
+    wandb_run = None
     if global_rank == 0 and args.log_dir is not None:
         added_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         args.log_dir = args.log_dir + '-' + added_time
         args.output_dir = args.log_dir
         os.makedirs(args.log_dir, exist_ok=True)
         log_writer = None
+        wandb_run = wandb.init(
+            project="ToucHD-AnyTouch2",
+            name=f"training-touchd-{args.data_sensor}",
+            dir=args.log_dir,
+            config=vars(args),
+        )
     else:
         log_writer = None
+        wandb_run = None
 
     data_loader_train = torch.utils.data.DataLoader(
         dataset_train, sampler=sampler_train,
@@ -149,6 +157,8 @@ def main(args):
     if args.eval:
         test_stats = evaluate(data_loader_val, model, device, args)
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
+        if wandb_run is not None:
+            wandb.finish()
         exit(0)
 
     print(f"Start training for {args.epochs} epochs")
@@ -161,10 +171,11 @@ def main(args):
             model, data_loader_train,
             optimizer, device, epoch, loss_scaler,
             log_writer=log_writer,
+            wandb_run=wandb_run,
             args=args
         )
 
-        test_stats = evaluate(data_loader_val, model, device, args)
+        test_stats = evaluate(data_loader_val, model, device, args, epoch, wandb_run=wandb_run)
         # if args.output_dir and (epoch % 20 == 0 or epoch + 1 == args.epochs):
         if test_stats["acc1"] >= max_accuracy:
             misc.save_model(
@@ -192,7 +203,8 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-    
+    if wandb_run is not None:
+        wandb.finish()
 
 if __name__ == "__main__":
     args = parse_args()

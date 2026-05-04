@@ -16,6 +16,7 @@ import datetime
 import json
 import time
 import copy
+import wandb
 
 import util.misc as misc
 from util.misc import NativeScalerWithGradNormCount as NativeScaler
@@ -84,13 +85,21 @@ def main(args):
         dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=False
     )
 
-
+    wandb_run = None
     if global_rank == 0 and args.log_dir is not None:
         # os.makedirs(args.log_dir + '-' + args.data_sensor, exist_ok=True)
         added_time = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         args.log_dir = args.log_dir + '-' + args.data_sensor + '-' + added_time
         args.output_dir = args.log_dir
         os.makedirs(args.log_dir, exist_ok=True)
+       
+        wandb_run = wandb.init(
+            project="ToucHD-AnyTouch2",
+            name=f"training-touchd-{args.data_sensor}-{added_time}-run",
+            dir=args.log_dir,
+            config=vars(args),
+        )
+
         log_writer = None
     else:
         log_writer = None
@@ -161,8 +170,10 @@ def main(args):
     misc.load_model(args=args, model_without_ddp=model_without_ddp, optimizer=optimizer, loss_scaler=loss_scaler)
 
     if args.eval:
-        test_stats = evaluate(data_loader_val, model, device, args, 0)
+        test_stats = evaluate(data_loader_val, model, device, args, 0, wandb_run=wandb_run)
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['rmse']:.1f}%")
+        if wandb_run is not None:
+            wandb.finish()
         exit(0)
 
     print(f"Start training for {args.epochs} epochs")
@@ -175,10 +186,11 @@ def main(args):
             model, data_loader_train,
             optimizer, device, epoch, loss_scaler,
             log_writer=log_writer,
+            wandb_run=wandb_run,
             args=args
         )
 
-        test_stats = evaluate(data_loader_val, model, device, args, epoch)
+        test_stats = evaluate(data_loader_val, model, device, args, epoch, wandb_run=wandb_run)
         # if args.output_dir and (epoch % 20 == 0 or epoch + 1 == args.epochs):
         if test_stats["rmse"] <= min_loss:
             misc.save_model(
@@ -206,7 +218,8 @@ def main(args):
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
     print('Training time {}'.format(total_time_str))
-    
+    if wandb_run is not None:
+        wandb.finish()
 
 if __name__ == "__main__":
     args = parse_args()

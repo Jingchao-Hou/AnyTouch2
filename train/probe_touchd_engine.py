@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import util.misc as misc
 import matplotlib.pyplot as plt
 import numpy as np
+import wandb
 
 def plot_correlation(forces_gt, forces_pred, log_path, epoch):
     colors = ["#7998e8", "#52a375", "#803b6b"]
@@ -41,6 +42,7 @@ def train_one_epoch(model: torch.nn.Module,
                     data_loader, optimizer: torch.optim.Optimizer,
                     device: torch.device, epoch: int, loss_scaler,
                     log_writer=None,
+                    wandb_run=None,
                     args=None):
     model.train(True)
     metric_logger = misc.MetricLogger(delimiter="  ")
@@ -107,13 +109,27 @@ def train_one_epoch(model: torch.nn.Module,
             log_writer.add_scalar('lr', lr, epoch_1000x)
 
 
+
+        if wandb_run is not None and misc.is_main_process() and (data_iter_step + 1) % accum_iter == 0:
+            epoch_1000x = int((data_iter_step / len(data_loader) + epoch) * 1000)
+            wandb.log({
+                "train/loss": loss_value_reduce,
+                "train/rmse_x": rmse_xyz[0].item(),
+                "train/rmse_y": rmse_xyz[1].item(),
+                "train/rmse_z": rmse_xyz[2].item(),
+                "train/lr": lr,
+                "train/epoch_progress": data_iter_step / len(data_loader) + epoch,
+            }, step=epoch_1000x)
+
+
+
     # gather the stats from all processes
     metric_logger.synchronize_between_processes()
     print("Averaged stats:", metric_logger)
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
 
 @torch.no_grad()
-def evaluate(data_loader, model, device, args, epoch):
+def evaluate(data_loader, model, device, args, epoch, wandb_run=None):
 
     metric_logger = misc.MetricLogger(delimiter="  ")
     header = 'Test:'
@@ -162,5 +178,17 @@ def evaluate(data_loader, model, device, args, epoch):
     #       .format(top1=metric_logger.acc1, losses=metric_logger.loss))
     print("Averaged stats:", metric_logger)
     plot_correlation(all_targets.cpu().numpy(), all_predictions.cpu().numpy(), args.log_dir, epoch)
+    
+    if wandb_run is not None and misc.is_main_process():
+        correlation_path = args.log_dir + '/correlation_epoch' + str(epoch) + '.png'
+        wandb.log({
+            "eval/rmse_x": metric_logger.meters["rmse_x"].global_avg,
+            "eval/rmse_y": metric_logger.meters["rmse_y"].global_avg,
+            "eval/rmse_z": metric_logger.meters["rmse_z"].global_avg,
+            "eval/rmse": metric_logger.meters["rmse"].global_avg,
+            "eval/correlation": wandb.Image(correlation_path),
+            "eval/epoch": epoch,
+        }, step=epoch)
+
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
