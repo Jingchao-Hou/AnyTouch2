@@ -1,12 +1,37 @@
-datasets/
+# checkpoints
+*.pth
+*.pt
+*.ckpt
 checkpoints/
+
+# logs
+log/
+logs/
+wandb/
+*.log
+*.png
+*.jpg
+
+# data
+datasets/
+data/
+*.h5
+*.npz
+
+# python
 __pycache__/
 *.pyc
-logs/
-*.log
-sparsh/log/
-wandb/
-*.wandb
-log/
-*.pth
-*.png
+*.pyo
+
+# env
+.env
+*.env
+
+# dev
+.codex
+.vscode/
+.idea/
+
+# misc
+*.tmp
+*.out
