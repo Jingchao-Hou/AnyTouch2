@@ -84,13 +84,13 @@ def plot_distribution(ax, counts: Counter, category_mapping: dict[int, str], tit
             fontsize=8,
         )
 def main() -> None:
-    base_dir = Path(__file__).resolve().parent
-    project_dir = base_dir.parents[1]
+    base_dir = Path("/fastwork/jhou/AnyTouch2")
+    project_dir = Path("/fastwork/jhou/AnyTouch2")
 
     train_path = project_dir / "data" / "train_bg.txt"
     test_path = project_dir / "data" / "test_bg.txt"
-    reference_path = base_dir / "category_reference.txt"
-    output_path = base_dir / "train_test_bg_distribution.png"
+    reference_path = base_dir / "datasets" / "touch_and_go" / "category_reference.txt"
+    output_path = base_dir / "datadis" / "touch_and_go" / "train_test_bg_distribution.png"
 
     category_mapping = load_category_mapping(reference_path)
     train_counts = load_label_counts(train_path)

@@ -114,10 +114,10 @@ def plot_distribution(ax, distribution, title, highlight_missing=False):
 
 
 def main():
-    data_dir = Path(__file__).resolve().parents[1]
-    train_path = data_dir / "train_data_new.json"
-    test_path = data_dir / "test_data_new.json"
-    cloth_metadata_path = data_dir / "cloth_metadata.json"
+    data_dir =Path("/fastwork/jhou/AnyTouch2")
+    train_path = data_dir / "data" / "train_data_new.json"
+    test_path = data_dir / "data" / "test_data_new.json"
+    cloth_metadata_path = data_dir / "data" / "cloth_metadata.json"
 
     train_data = load_json(train_path)
     test_data = load_json(test_path)
@@ -136,7 +136,7 @@ def main():
     )
     axes[1].set_xlabel("Encoded textile type")
 
-    output_path = Path(__file__).resolve().parent / "cloth_data_distribution.png"
+    output_path = data_dir / "datadis" / "cloth" / "cloth_data_distribution.png"
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     print(f"Saved plot to {output_path}")
 

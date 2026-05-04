@@ -76,10 +76,10 @@ def plot_distribution(counts: Counter, category_mapping: dict[int, str], output_
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parent
-    label_path = base_dir / "label.txt"
-    reference_path = base_dir / "category_reference.txt"
-    output_path = base_dir / "label_distribution.png"
+    base_dir = Path("/fastwork/jhou/AnyTouch2")
+    label_path = base_dir / "datasets" / "touch_and_go" /"label.txt"
+    reference_path = base_dir / "datasets" / "touch_and_go" / "category_reference.txt"
+    output_path = base_dir / "datadis" / "touch_and_go" / "label_distribution.png"
 
     category_mapping = load_category_mapping(reference_path)
     counts = load_label_counts(label_path)

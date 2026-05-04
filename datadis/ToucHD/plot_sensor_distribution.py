@@ -77,7 +77,7 @@ def plot_used_distribution(
     plt.figtext(
         0.5,
         0.01,
-        "Note: 'dm' exists in the dataset folders but is not present in all_data_direction.json, so its used count is 0.",
+        "Note: 'dm' exists in the dataset folders but is not present in all_data_direction.json.",
         ha="center",
         fontsize=9,
     )
@@ -87,9 +87,9 @@ def plot_used_distribution(
 
 
 def main() -> None:
-    base_dir = Path(__file__).resolve().parent
-    json_path = base_dir / "all_data_direction.json"
-    output_path = base_dir / "sensor_distribution.png"
+    base_dir = Path("/fastwork/jhou/AnyTouch2")
+    json_path = base_dir / "datasets" / "ToucHD-Force" / "all_data_direction.json"
+    output_path = base_dir / "datadis" / "ToucHD" / "sensor_distribution.png"
 
     used_counts, session_count = load_used_counts(json_path)
     raw_counts = count_raw_files(base_dir)

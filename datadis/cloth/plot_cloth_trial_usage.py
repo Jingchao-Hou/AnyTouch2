@@ -74,9 +74,9 @@ def plot_usage(ax, usage_by_cloth, title, color):
 
 
 def main():
-    data_dir = Path(__file__).resolve().parents[1]
-    train_data = load_json(data_dir / "train_data_new.json")
-    test_data = load_json(data_dir / "test_data_new.json")
+    data_dir = Path("/fastwork/jhou/AnyTouch2")
+    train_data = load_json(data_dir / "data" /"train_data_new.json")
+    test_data = load_json(data_dir / "data" / "test_data_new.json")
 
     train_usage = compute_trial_usage(train_data)
     test_usage = compute_trial_usage(test_data)
@@ -86,7 +86,7 @@ def main():
     plot_usage(axes[1], test_usage, "Test Cloth Usage by Cloth Index", "#DD8452")
     axes[1].set_xlabel("Cloth index")
 
-    output_path = Path(__file__).resolve().parent / "cloth_trial_usage_distribution.png"
+    output_path = data_dir / "datadis" / "cloth" / "cloth_trial_usage_distribution.png"
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     print(f"Saved plot to {output_path}")
 
