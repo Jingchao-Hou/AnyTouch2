@@ -9,8 +9,6 @@ log/
 logs/
 wandb/
 *.log
-*.png
-*.jpg
 
 # data
 datasets/

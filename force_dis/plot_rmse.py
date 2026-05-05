@@ -83,18 +83,37 @@ def plot_rmse_bar_from_json(json_path, save_path, title=None):
     plt.savefig(save_path, dpi=300)
     plt.close()
 
-    print(f"Saved figure at {save_path}")
+    # print(f"Saved figure at {save_path}")
 
+    mean_rmse_all = rmse.mean()
+    min_rmse_all = rmse.min()
+    max_rmse_all = rmse.max()
+
+    print(f"[{title}] RMSE stats (raw):")
+    print(f"  Mean: {mean_rmse_all:.2f}")
+    print(f"  Min : {min_rmse_all:.2f}")
+    print(f"  Max : {max_rmse_all:.2f}")
+
+    avg_rmse_np = np.array(avg_rmse)
+    mean_bin = avg_rmse_np.mean()
+    min_bin = avg_rmse_np.min()
+    max_bin = avg_rmse_np.max()
+
+    print(f"[{title}] RMSE stats (per-avg):")
+    print(f"  Mean: {mean_bin:.2f}")
+    print(f"  Min : {min_bin:.2f}")
+    print(f"  Max : {max_bin:.2f}")
+    print("\n")
 
 if __name__ == "__main__":
     plot_rmse_bar_from_json(
         "/fastwork/jhou/AnyTouch2/log/touchd_eval-gelsight-2026-05-05_12-17-37/eval_force_rmse_epoch0.json",
         "/fastwork/jhou/AnyTouch2/force_dis/gelsight_rmse.png",
-        title="Gelsight: Average RMSE by Force Magnitude"
+        title="Gelsight"
     )
 
     plot_rmse_bar_from_json(
         "/fastwork/jhou/AnyTouch2/log/touchd_eval-digit-2026-05-05_12-12-57/eval_force_rmse_epoch0.json",
         "/fastwork/jhou/AnyTouch2/force_dis/digit_rmse.png",
-        title="Digit: Average RMSE by Force Magnitude"
+        title="Digit"
     )
