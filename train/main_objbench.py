@@ -175,11 +175,10 @@ def main(args):
             model, data_loader_train,
             optimizer, device, epoch, loss_scaler,
             log_writer=log_writer,
-            wandb_run=wandb_run,
             args=args
         )
 
-        test_stats = evaluate(data_loader_val, model, device, args, epoch, wandb_run=wandb_run)
+        test_stats = evaluate(data_loader_val, model, device, args, epoch)
         # if args.output_dir and (epoch % 20 == 0 or epoch + 1 == args.epochs):
         if test_stats["acc1"] >= max_accuracy:
             misc.save_model(

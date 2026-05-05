@@ -21,7 +21,7 @@ force_sensor_id_to_name = {
 
 class TAGDataset_video(Dataset):
     def __init__(self, args, mode='train'):
-        TAG_dir = 'datasets/TAG/touch_and_go/'
+        TAG_dir = 'datasets/touch_and_go/dataset/'
 
         self.datalist = []
         self.labels = []
@@ -116,7 +116,7 @@ class TAGDataset_video(Dataset):
 
 class ClothDataset_video(Dataset):
     def __init__(self, args, mode='train'):
-        Cloth_dir = 'datasets/yuan18/Data_ICRA18/Data/'
+        Cloth_dir = 'datasets/cloth/Data_ICRA18/Data/'
 
         self.datalist = []
         self.labels = []
