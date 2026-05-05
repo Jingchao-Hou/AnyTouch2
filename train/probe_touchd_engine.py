@@ -175,7 +175,7 @@ def evaluate(data_loader, model, device, args, epoch, wandb_run=None):
     # Compute per sample RMSE
     per_sample_rmse = torch.sqrt(((all_predictions - all_targets)**2).mean(dim=1))*1000
     save_dict = {
-    "force_magnitudes": force_magnitude.cpu().numpy().tolist(),
+    "force_magnitudes": all_force_magnitudes.cpu().numpy().tolist(),
     "rmse": per_sample_rmse.cpu().numpy().tolist(),
     "target": all_targets.cpu().numpy().tolist(),
     "prediction": all_predictions.cpu().numpy().tolist(),
