@@ -173,4 +173,30 @@ def evaluate(data_loader, model, device, args):
             }
         results["cloth_class_metrics"] = cloth_class_metrics
 
+    
+
+    if args.dataset == 'material':
+        from sklearn.metrics import precision_recall_fscore_support
+
+        all_preds = torch.cat(all_preds).numpy()
+        all_targets = torch.cat(all_targets).numpy()
+
+        precision, recall, f1, support = precision_recall_fscore_support(
+            all_targets,
+            all_preds,
+            labels=list(range(20)),
+            zero_division=0,
+        )
+
+        tag_class_metrics = {}
+        for i in range(20):
+            tag_class_metrics[str(i)] = {
+                "precision": float(precision[i]),
+                "recall": float(recall[i]),
+                "f1": float(f1[i]),
+                "support": int(support[i]),
+            }
+        results["tag_class_metrics"] = tag_class_metrics
+
+
     return results
