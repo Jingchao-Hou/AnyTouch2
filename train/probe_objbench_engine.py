@@ -163,7 +163,7 @@ def evaluate(data_loader, model, device, args):
             zero_division=0,
         )
 
-        class_metrics = {}
+        cloth_class_metrics = {}
         for i in range(20):
             cloth_class_metrics[str(i)] = {
                 "precision": float(precision[i]),
