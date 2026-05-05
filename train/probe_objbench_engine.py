@@ -91,6 +91,10 @@ def train_one_epoch(model: torch.nn.Module,
 
 @torch.no_grad()
 def evaluate(data_loader, model, device, args):
+
+    all_preds = []
+    all_targets = []
+
     if args.dataset in ['material', 'cloth']:
         criterion = torch.nn.CrossEntropyLoss()
     else:
@@ -124,6 +128,9 @@ def evaluate(data_loader, model, device, args):
 
         if args.dataset in ['material', 'cloth']:
             acc1, acc5 = accuracy(output, target, topk=(1,5))
+            preds = output.argmax(dim=1)
+            all_preds.append(preds.detach().cpu())
+            all_targets.append(target.detach().cpu())
         else:
             output = sigmoid(output)
             predictions = (output > 0.5).float()
@@ -140,5 +147,30 @@ def evaluate(data_loader, model, device, args):
     metric_logger.synchronize_between_processes()
     print('* Acc@1 {top1.global_avg:.3f} loss {losses.global_avg:.3f}'
           .format(top1=metric_logger.acc1, losses=metric_logger.loss))
+    
+    results = {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+    
+    if args.dataset == 'cloth':
+        from sklearn.metrics import precision_recall_fscore_support
 
-    return {k: meter.global_avg for k, meter in metric_logger.meters.items()}
+        all_preds = torch.cat(all_preds).numpy()
+        all_targets = torch.cat(all_targets).numpy()
+
+        precision, recall, f1, support = precision_recall_fscore_support(
+            all_targets,
+            all_preds,
+            labels=list(range(20)),
+            zero_division=0,
+        )
+
+        class_metrics = {}
+        for i in range(20):
+            cloth_class_metrics[str(i)] = {
+                "precision": float(precision[i]),
+                "recall": float(recall[i]),
+                "f1": float(f1[i]),
+                "support": int(support[i]),
+            }
+        results["cloth_class_metrics"] = cloth_class_metrics
+
+    return results

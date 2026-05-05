@@ -185,6 +185,13 @@ def main(args):
                 args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                 loss_scaler=loss_scaler, epoch=0)
         
+        cloth_class_metrics = test_stats.pop("cloth_class_metrics", None)
+
+        if cloth_class_metrics is not None and args.output_dir and misc.is_main_process():
+            with open(os.path.join(args.output_dir, f"cloth_class_metrics_epoch_{epoch}.json"), "w", encoding="utf-8") as f:
+                json.dump(cloth_class_metrics, f, indent=2)
+
+
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
         max_accuracy = max(max_accuracy, test_stats["acc1"])
         print(f'Max accuracy: {max_accuracy:.2f}%')
