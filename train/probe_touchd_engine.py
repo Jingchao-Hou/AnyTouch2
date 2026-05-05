@@ -182,7 +182,7 @@ def evaluate(data_loader, model, device, args, epoch, wandb_run=None):
     }
 
     with open(args.log_dir + f"/eval_force_rmse_epoch{epoch}.json", "w") as f:
-        json.dump(save_dict, f)
+        json.dump(save_dict, f, indent=2)
 
 
     forces_rmse_xyz = torch.sqrt(((all_predictions - all_targets) ** 2).mean(dim=0)) * 1000  # in mN

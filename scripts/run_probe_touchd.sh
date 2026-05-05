@@ -4,8 +4,8 @@ CUDA_VISIBLE_DEVICES=0 python -u -m torch.distributed.launch --master_port=13934
     --weight_decay 0.05 \
     --lr 2e-4 \
     --warmup_epochs 0 \
-    --output_dir log/touchd \
-    --log_dir log/touchd \
+    --output_dir log/touchd_eval \
+    --log_dir log/touchd_eval \
     --pooling none \
     --dataset ours_force \
     --num_workers 20 \
@@ -15,6 +15,6 @@ CUDA_VISIBLE_DEVICES=0 python -u -m torch.distributed.launch --master_port=13934
     --stride 2 \
     --model anytouch \
     --data_sensor gelsight \
-    --resume_downstream checkpoints/checkpoint-4frames-touchd-digit.pth \
+    --resume_downstream checkpoints/checkpoint-4frames-touchd-gelsight.pth \
     --eval \
     

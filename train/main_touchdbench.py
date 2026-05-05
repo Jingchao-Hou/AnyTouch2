@@ -95,7 +95,7 @@ def main(args):
        
         wandb_run = wandb.init(
             project="ToucHD-AnyTouch2",
-            name=f"training-touchd-{args.data_sensor}-{added_time}-run",
+            name=f"Eval-touchd-{args.data_sensor}-{added_time}-run",
             dir=args.log_dir,
             config=vars(args),
         )
