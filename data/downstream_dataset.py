@@ -235,6 +235,8 @@ class MyForceDataset_video(Dataset):
 
         self.labels_map = {}
 
+        self.force_magnitudes = []    
+
         if mode == 'train':
             self.obj_list = [6,41,52,53,59,69,70]
         else:
@@ -283,6 +285,12 @@ class MyForceDataset_video(Dataset):
                         if j == args.num_frames - 1:
                             force_xyz = [sensor_data[now_index][1], sensor_data[now_index][2], -sensor_data[now_index][3]]
                             force_tensor = torch.tensor(force_xyz).float()
+                            
+                            # Add force magnitudes
+                            force_xyz_tensor = torch.tensor(force_xyz).float()
+                            force_magnitudes = torch.norm(force_xyz_tensor, p=2)
+                            self.force_magnitudes.append(force_magnitudes)
+
                             force_tensor[0] = force_tensor[0] / max_force_abs_xyz[force_sensor_id_to_name[sensor_type]][0]
                             force_tensor[1] = force_tensor[1] / max_force_abs_xyz[force_sensor_id_to_name[sensor_type]][1]
                             force_tensor[2] = torch.clip(force_tensor[2] / max_force_abs_xyz[force_sensor_id_to_name[sensor_type]][2], 0.0, 1.0)
@@ -341,4 +349,4 @@ class MyForceDataset_video(Dataset):
         img = self.transform(img)
 
 
-        return img, self.sensor_type[index], self.force_labels[index], self.force_scales[index]
+        return img, self.sensor_type[index], self.force_labels[index], self.force_scales[index], self.force_magnitudes[index]

@@ -8,6 +8,8 @@ import util.misc as misc
 import matplotlib.pyplot as plt
 import numpy as np
 import wandb
+import json
+
 
 def plot_correlation(forces_gt, forces_pred, log_path, epoch):
     colors = ["#7998e8", "#52a375", "#803b6b"]
@@ -140,12 +142,17 @@ def evaluate(data_loader, model, device, args, epoch, wandb_run=None):
     all_targets = []
     all_force_scales = []
 
+    # add force magnitudes
+    all_force_magnitudes = []
+
     for batch in metric_logger.log_every(data_loader, 40, header):
 
         images = batch[0].to(device, non_blocking=True)
         sensors = batch[1].to(device, non_blocking=True).int()
         target = batch[2].to(device, non_blocking=True)
         force_scale = batch[3].to(device, non_blocking=True)
+        
+        force_magnitudes = batch[4].to(device, non_blocking=True)
 
         # compute output
         with torch.amp.autocast('cuda'):
@@ -155,13 +162,28 @@ def evaluate(data_loader, model, device, args, epoch, wandb_run=None):
             all_targets.append(target.detach())
             all_force_scales.append(force_scale.detach())
 
+            all_force_magnitudes.append(force_magnitudes.detach())
 
     all_predictions = torch.cat(all_predictions, dim=0)
     all_targets = torch.cat(all_targets, dim=0)
     all_force_scales = torch.cat(all_force_scales, dim=0)
+    all_force_magnitudes = torch.cat(all_force_magnitudes, dim=0)
 
     all_predictions = all_predictions * all_force_scales
     all_targets = all_targets * all_force_scales
+
+    # Compute per sample RMSE
+    per_sample_rmse = torch.sqrt(((all_predictions - all_targets)**2).mean(dim=1))*1000
+    save_dict = {
+    "force_magnitudes": force_magnitude.cpu().numpy().tolist(),
+    "rmse": per_sample_rmse.cpu().numpy().tolist(),
+    "target": all_targets.cpu().numpy().tolist(),
+    "prediction": all_predictions.cpu().numpy().tolist(),
+    }
+
+    with open(args.log_dir + f"/eval_force_rmse_epoch{epoch}.json", "w") as f:
+        json.dump(save_dict, f)
+
 
     forces_rmse_xyz = torch.sqrt(((all_predictions - all_targets) ** 2).mean(dim=0)) * 1000  # in mN
     total_rmse = forces_rmse_xyz.sum()
