@@ -84,8 +84,8 @@ def main(args):
         os.makedirs(args.log_dir, exist_ok=True)
         log_writer = None
         wandb_run = wandb.init(
-            project="ToucHD-AnyTouch2",
-            name=f"training-touchd-{args.data_sensor}",
+            project="Objbench-AnyTouch2",
+            name=f"training-{args.dataset}-{args.data_sensor}",
             dir=args.log_dir,
             config=vars(args),
         )
@@ -157,8 +157,12 @@ def main(args):
     if args.eval:
         test_stats = evaluate(data_loader_val, model, device, args)
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
-        if wandb_run is not None:
-            wandb.finish()
+        if wandb_run is not None and misc.is_main_process():
+            wandb_run.log({
+                "eval/acc1": test_stats["acc1"],
+                "eval/loss": test_stats["loss"],
+        }, step=0)
+
         exit(0)
 
     print(f"Start training for {args.epochs} epochs")
@@ -185,6 +189,17 @@ def main(args):
         print(f"Accuracy of the network on the {len(dataset_val)} test images: {test_stats['acc1']:.1f}%")
         max_accuracy = max(max_accuracy, test_stats["acc1"])
         print(f'Max accuracy: {max_accuracy:.2f}%')
+
+        if wandb_run is not None and misc.is_main_process():
+            wandb_run.log({
+                "train/loss": train_stats["loss"],
+                "train/lr": train_stats["lr"],
+                "eval/acc1": test_stats["acc1"],
+                "eval/loss": test_stats["loss"],
+                "eval/best_acc1": max_accuracy,
+                "epoch": epoch,
+            }, step=epoch)
+
 
         if log_writer is not None:
             log_writer.add_scalar('perf/test_acc1', test_stats['acc1'], epoch)
