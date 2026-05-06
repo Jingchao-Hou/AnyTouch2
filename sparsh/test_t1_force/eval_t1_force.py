@@ -16,10 +16,16 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(SPARSH_DIR))
 
 import hydra
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils.data as data
+import wandb
 from omegaconf import OmegaConf
+from PIL import Image
 from transformers import AutoConfig
 
 from model.tactile_mae import TactileVideoMAE
@@ -117,9 +123,15 @@ def extract_epoch_name(checkpoint_path: str) -> str:
 
 def load_run_config(run_dir: str):
     run_dir = str(Path(run_dir).resolve())
-    config_path = os.path.join(run_dir, "config.yaml")
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Could not find run config: {config_path}")
+    config_candidates = [
+        os.path.join(run_dir, "config.yaml"),
+        os.path.join(run_dir, ".hydra", "config.yaml"),
+    ]
+    config_path = next((p for p in config_candidates if os.path.exists(p)), None)
+    if config_path is None:
+        raise FileNotFoundError(
+            "Could not find a run config. Checked:\n" + "\n".join(config_candidates)
+        )
     cfg = OmegaConf.load(config_path)
     OmegaConf.set_struct(cfg, False)
     return cfg
@@ -186,7 +198,104 @@ def build_dataset(cfg, dataset_name: str):
     )
 
 
-def run_single_dataset(cfg, model, dataset_name: str, checkpoint_path: str, device: str):
+def load_scaled_outputs(tester, dataset):
+    outputs = np.load(
+        f"{tester.path_outputs}/{tester.epoch}_predictions.npy", allow_pickle=True
+    ).item()
+    scale = np.asarray(dataset.max_abs_forceXYZ, dtype=np.float32)
+    forces_gt = outputs["forces_gt"] * scale
+    forces_pred = outputs["forces_pred"] * scale
+    return forces_gt, forces_pred
+
+
+def make_force_magnitude_bar_plot(
+    forces_gt: np.ndarray,
+    forces_pred: np.ndarray,
+    dataset_name: str,
+    output_prefix: str,
+    n_bins: int = 8,
+):
+    force_magnitudes = np.linalg.norm(forces_gt, axis=1)
+    sample_rmse = np.sqrt(((forces_gt - forces_pred) ** 2).mean(axis=1))
+
+    max_mag = float(force_magnitudes.max())
+    bin_edges = np.linspace(0.0, max_mag, n_bins + 1)
+    bin_indices = np.digitize(force_magnitudes, bin_edges[1:-1], right=False)
+
+    avg_rmse = []
+    counts = []
+    labels = []
+    centers = []
+    for i in range(n_bins):
+        mask = bin_indices == i
+        left = bin_edges[i]
+        right = bin_edges[i + 1]
+        labels.append(f"{left:.2f}-{right:.2f}")
+        centers.append((left + right) / 2.0)
+        counts.append(int(mask.sum()))
+        avg_rmse.append(float(sample_rmse[mask].mean()) if mask.any() else np.nan)
+
+    stats = {
+        "dataset_name": dataset_name,
+        "bin_edges": bin_edges,
+        "bin_centers": np.asarray(centers, dtype=np.float32),
+        "bin_labels": np.asarray(labels),
+        "avg_rmse": np.asarray(avg_rmse, dtype=np.float32),
+        "counts": np.asarray(counts, dtype=np.int32),
+    }
+    np.save(f"{output_prefix}_force_magnitude_stats.npy", stats)
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    x = np.arange(n_bins)
+    bar_values = np.nan_to_num(stats["avg_rmse"], nan=0.0)
+    ax.bar(x, bar_values, color="#4C78A8", edgecolor="black", alpha=0.9)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{center:.2f}" for center in stats["bin_centers"]])
+    ax.set_xlabel("Force Magnitude Bin Center (N)")
+    ax.set_ylabel("Average RMSE (N)")
+    ax.set_title(f"Average RMSE by Force Magnitude: {dataset_name}")
+    ax.grid(axis="y", alpha=0.3)
+    for idx, (value, count) in enumerate(zip(stats["avg_rmse"], stats["counts"])):
+        if not np.isnan(value):
+            ax.text(idx, value, f"n={count}", ha="center", va="bottom", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(f"{output_prefix}_force_magnitude_rmse.png", dpi=200)
+
+    img_buf = Path(f"{output_prefix}_force_magnitude_rmse.png")
+    img = Image.open(img_buf)
+    plt.close(fig)
+    return stats, img
+
+
+def init_eval_wandb(cfg, checkpoint_path: str):
+    run_name = (
+        f"{cfg.sensor}_{cfg.task_name}_eval_"
+        f"{Path(checkpoint_path).stem}"
+    )
+    return wandb.init(
+        project="Eval-f1-force",
+        group="t1_force_eval",
+        name=run_name,
+        dir=cfg.paths.output_dir,
+        config={
+            "sensor": cfg.sensor,
+            "task_name": cfg.task_name,
+            "experiment_name": cfg.experiment_name,
+            "checkpoint_task": checkpoint_path,
+            "checkpoint_encoder": cfg.ckpt_path,
+            "datasets": list(cfg.test.data.dataset_name),
+        },
+    )
+
+
+def run_single_dataset(
+    cfg,
+    model,
+    dataset_name: str,
+    checkpoint_path: str,
+    device: str,
+    wandb_run=None,
+):
     dataset = build_dataset(cfg, dataset_name)
     dataloader = data.DataLoader(
         dataset,
@@ -210,6 +319,38 @@ def run_single_dataset(cfg, model, dataset_name: str, checkpoint_path: str, devi
     tester.get_overall_metrics(dataset)
     tester.make_plots(dataset)
 
+    forces_gt, forces_pred = load_scaled_outputs(tester, dataset)
+    output_prefix = f"{tester.path_outputs}/{tester.epoch}"
+    mag_stats, mag_plot = make_force_magnitude_bar_plot(
+        forces_gt,
+        forces_pred,
+        dataset_name=tester.dataset_name,
+        output_prefix=output_prefix,
+    )
+
+    if wandb_run is not None:
+        metrics_path = (
+            f"{tester.path_output_model}/{tester.epoch}_{tester.dataset_name}_metrics.npy"
+        )
+        metrics = np.load(metrics_path, allow_pickle=True).item()
+        wandb_payload = {
+            f"{tester.dataset_name}/rmse": float(metrics["rmse"]),
+            f"{tester.dataset_name}/rmse_std": float(metrics["rmse_std"]),
+            f"{tester.dataset_name}/corr_fx": float(metrics["corr"][0]),
+            f"{tester.dataset_name}/corr_fy": float(metrics["corr"][1]),
+            f"{tester.dataset_name}/corr_fz": float(metrics["corr"][2]),
+            f"{tester.dataset_name}/n_samples": int(metrics["n_samples"]),
+            f"{tester.dataset_name}/force_magnitude_rmse": wandb.Image(mag_plot),
+        }
+        for idx, (center, rmse, count) in enumerate(
+            zip(mag_stats["bin_centers"], mag_stats["avg_rmse"], mag_stats["counts"])
+        ):
+            if not np.isnan(rmse):
+                wandb_payload[f"{tester.dataset_name}/force_mag_bin_{idx}_center"] = float(center)
+                wandb_payload[f"{tester.dataset_name}/force_mag_bin_{idx}_avg_rmse"] = float(rmse)
+                wandb_payload[f"{tester.dataset_name}/force_mag_bin_{idx}_count"] = int(count)
+        wandb_run.log(wandb_payload)
+
 
 def main():
     args = parse_args()
@@ -221,11 +362,14 @@ def main():
     model = build_anytouch_model(cfg, args.checkpoint)
     model.to(args.device)
     model.eval()
+    wandb_run = init_eval_wandb(cfg, args.checkpoint)
 
     dataset_names = list(cfg.test.data.dataset_name)
     for dataset_name in dataset_names:
         print(f"\nEvaluating {cfg.sensor} on {dataset_name}")
-        run_single_dataset(cfg, model, dataset_name, args.checkpoint, args.device)
+        run_single_dataset(
+            cfg, model, dataset_name, args.checkpoint, args.device, wandb_run=wandb_run
+        )
 
     if len(dataset_names) > 1:
         tester = TestForceSL(device=args.device, module=model)
@@ -238,6 +382,21 @@ def main():
             config=cfg,
         )
         tester.get_overall_metrics(build_dataset(cfg, dataset_names[0]), over_all_outputs=True)
+        metrics = np.load(
+            f"{tester.path_output_model}/{tester.epoch}_metrics.npy",
+            allow_pickle=True,
+        ).item()
+        wandb_run.log(
+            {
+                "all/rmse": float(metrics["rmse"]),
+                "all/rmse_std": float(metrics["rmse_std"]),
+                "all/corr_fx": float(metrics["corr"][0]),
+                "all/corr_fy": float(metrics["corr"][1]),
+                "all/corr_fz": float(metrics["corr"][2]),
+                "all/n_samples": int(metrics["n_samples"]),
+            }
+        )
+    wandb_run.finish()
 
 
 if __name__ == "__main__":
