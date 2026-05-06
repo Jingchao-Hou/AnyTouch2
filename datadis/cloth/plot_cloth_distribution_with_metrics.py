@@ -7,28 +7,6 @@ from matplotlib import colors as mcolors
 
 TEXTILE_TYPE_COUNT = 20
 COMMON_CMAP_NAME = "YlGnBu"
-TEXTILE_TYPE_NAMES = [
-    "broadcloth",
-    "cotton",
-    "denim",
-    "fleece",
-    "hairy",
-    "leather",
-    "other",
-    "polyester",
-    "suit",
-    "wool",
-    "corduroy",
-    "crepe",
-    "flannel",
-    "garbardine",
-    "knit",
-    "net",
-    "parka",
-    "satin",
-    "velvet",
-    "woven",
-]
 
 
 def load_json(path: Path):
@@ -45,7 +23,7 @@ def load_metric_rows(metrics_path: Path) -> list[dict[str, float]]:
         rows.append(
             {
                 "class_id": class_id,
-                "label": TEXTILE_TYPE_NAMES[class_id],
+                "label": f"type {class_id}",
                 "precision": float(class_metrics["precision"]),
                 "recall": float(class_metrics["recall"]),
                 "f1": float(class_metrics["f1"]),

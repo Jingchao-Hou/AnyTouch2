@@ -57,7 +57,7 @@ def load_metric_rows(metrics_path: Path, category_mapping: dict[int, str]) -> li
         rows.append(
             {
                 "class_id": class_id,
-                "label": category_mapping.get(class_id, f"Label {class_id}"),
+                "label": f"{class_id} {category_mapping.get(class_id, f'Label {class_id}')}",
                 "precision": float(class_metrics["precision"]),
                 "recall": float(class_metrics["recall"]),
                 "f1": float(class_metrics["f1"]),
