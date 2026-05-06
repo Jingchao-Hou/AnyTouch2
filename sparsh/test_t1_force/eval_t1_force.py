@@ -282,7 +282,7 @@ def make_force_magnitude_bar_plot(
     ax.bar(x, bar_values, color="#4C78A8", edgecolor="black", alpha=0.9)
     ax.set_xticks(x)
     ax.set_xticklabels([f"{center:.2f}" for center in stats["bin_centers"]])
-    ax.set_xlabel("Force Magnitude Bin Center (N)")
+    ax.set_xlabel("Force Magnitude (N)")
     ax.set_ylabel("Average RMSE (mN)")
     ax.set_title(f"Average RMSE by Force Magnitude: {dataset_name}")
     ax.grid(axis="y", alpha=0.3)
