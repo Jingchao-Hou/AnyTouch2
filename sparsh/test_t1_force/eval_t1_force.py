@@ -382,13 +382,6 @@ def run_single_dataset(
             f"{tester.dataset_name}/n_samples": int(metrics["n_samples"]),
             f"{tester.dataset_name}/force_magnitude_rmse": wandb.Image(mag_plot),
         }
-        for idx, (center, rmse, count) in enumerate(
-            zip(mag_stats["bin_centers"], mag_stats["avg_rmse"], mag_stats["counts"])
-        ):
-            if not np.isnan(rmse):
-                wandb_payload[f"{tester.dataset_name}/force_mag_bin_{idx}_center"] = float(center)
-                wandb_payload[f"{tester.dataset_name}/force_mag_bin_{idx}_avg_rmse"] = float(rmse)
-                wandb_payload[f"{tester.dataset_name}/force_mag_bin_{idx}_count"] = int(count)
         wandb_run.log(wandb_payload)
 
     return {
