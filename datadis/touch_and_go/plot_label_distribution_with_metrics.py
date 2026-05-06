@@ -89,7 +89,7 @@ def plot_distribution_with_metrics(rows: list[dict[str, float]], output_path: Pa
 
     ax.set_title("Touch-and-Go Test Label Distribution With Precision / Recall / F1")
     ax.set_xlabel("Label")
-    ax.set_ylabel("Support")
+    ax.set_ylabel("Count")
     ax.set_xticks(range(len(rows)))
     ax.set_xticklabels([row["label"] for row in rows], rotation=45, ha="right")
     ax.grid(axis="y", linestyle="--", alpha=0.3)
@@ -100,7 +100,7 @@ def plot_distribution_with_metrics(rows: list[dict[str, float]], output_path: Pa
             bar.get_x() + bar.get_width() / 2,
             bar.get_height() + y_offset,
             (
-                f"S {row['support']}\n"
+                f"C {row['support']}\n"
                 f"P {row['precision']:.3f}\n"
                 f"R {row['recall']:.3f}\n"
                 f"F1 {row['f1']:.3f}"
@@ -122,7 +122,7 @@ def plot_distribution_with_metrics(rows: list[dict[str, float]], output_path: Pa
 
 def main() -> None:
     project_dir = Path(__file__).resolve().parents[2]
-    metrics_path = project_dir / "log" / "tag_class_metrics49.json"
+    metrics_path = project_dir / "log" / "tag-2026-05-05_21-29-25" / "tag_class_metrics49.json"
     output_path = project_dir / "datadis" / "touch_and_go" / "label_distribution_with_metrics.png"
 
     category_mapping = get_category_mapping(project_dir)

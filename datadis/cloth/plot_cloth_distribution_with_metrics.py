@@ -77,7 +77,7 @@ def plot_distribution_with_metrics(rows: list[dict[str, float]], output_path: Pa
 
     ax.set_title("Cloth Textile Type Test Distribution With Precision / Recall / F1")
     ax.set_xlabel("Textile type")
-    ax.set_ylabel("Support")
+    ax.set_ylabel("Count")
     ax.set_xticks(range(len(rows)))
     ax.set_xticklabels([row["label"] for row in rows], rotation=45, ha="right")
     ax.grid(axis="y", linestyle="--", alpha=0.3)
@@ -88,7 +88,7 @@ def plot_distribution_with_metrics(rows: list[dict[str, float]], output_path: Pa
             bar.get_x() + bar.get_width() / 2,
             bar.get_height() + y_offset,
             (
-                f"S {row['support']}\n"
+                f"C {row['support']}\n"
                 f"P {row['precision']:.3f}\n"
                 f"R {row['recall']:.3f}\n"
                 f"F1 {row['f1']:.3f}"
@@ -110,7 +110,7 @@ def plot_distribution_with_metrics(rows: list[dict[str, float]], output_path: Pa
 
 def main() -> None:
     project_dir = Path(__file__).resolve().parents[2]
-    metrics_path = project_dir / "log" / "cloth_class_metrics_epoch_49.json"
+    metrics_path = project_dir / "log" / "cloth-2026-05-05_19-17-51" / "cloth_class_metrics_epoch_49.json"
     output_path = project_dir / "datadis" / "cloth" / "cloth_data_distribution_with_metrics.png"
 
     rows = load_metric_rows(metrics_path)
