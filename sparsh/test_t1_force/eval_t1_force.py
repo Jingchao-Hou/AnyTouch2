@@ -241,23 +241,33 @@ def make_force_magnitude_bar_plot(
         "bin_centers": np.asarray(centers, dtype=np.float32),
         "bin_labels": np.asarray(labels),
         "avg_rmse": np.asarray(avg_rmse, dtype=np.float32),
+        "avg_rmse_mn": np.asarray(avg_rmse, dtype=np.float32) * 1000.0,
         "counts": np.asarray(counts, dtype=np.int32),
     }
     np.save(f"{output_prefix}_force_magnitude_stats.npy", stats)
 
     fig, ax = plt.subplots(figsize=(10, 5))
     x = np.arange(n_bins)
-    bar_values = np.nan_to_num(stats["avg_rmse"], nan=0.0)
+    bar_values = np.nan_to_num(stats["avg_rmse_mn"], nan=0.0)
     ax.bar(x, bar_values, color="#4C78A8", edgecolor="black", alpha=0.9)
     ax.set_xticks(x)
     ax.set_xticklabels([f"{center:.2f}" for center in stats["bin_centers"]])
     ax.set_xlabel("Force Magnitude Bin Center (N)")
-    ax.set_ylabel("Average RMSE (N)")
+    ax.set_ylabel("Average RMSE (mN)")
     ax.set_title(f"Average RMSE by Force Magnitude: {dataset_name}")
     ax.grid(axis="y", alpha=0.3)
-    for idx, (value, count) in enumerate(zip(stats["avg_rmse"], stats["counts"])):
-        if not np.isnan(value):
-            ax.text(idx, value, f"n={count}", ha="center", va="bottom", fontsize=8)
+    for idx, (value_mn, count, label) in enumerate(
+        zip(stats["avg_rmse_mn"], stats["counts"], stats["bin_labels"])
+    ):
+        if not np.isnan(value_mn):
+            ax.text(
+                idx,
+                value_mn,
+                f"{label} N\n{value_mn:.1f} mN\nn={count}",
+                ha="center",
+                va="bottom",
+                fontsize=8,
+            )
     fig.tight_layout()
     fig.savefig(f"{output_prefix}_force_magnitude_rmse.png", dpi=200)
 
