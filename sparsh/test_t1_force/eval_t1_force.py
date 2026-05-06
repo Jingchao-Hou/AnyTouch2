@@ -361,6 +361,9 @@ def run_single_dataset(
 
     forces_gt, forces_pred = load_scaled_outputs(tester, dataset)
     output_prefix = f"{tester.path_outputs}/{tester.epoch}"
+    correlation_plot_path = f"{output_prefix}_correlation.png"
+    xyz_error_plot_path = f"{output_prefix}_XYZerror.png"
+    cone_error_plot_path = f"{output_prefix}_ConeError.png"
     mag_stats, mag_plot = make_force_magnitude_bar_plot(
         forces_gt,
         forces_pred,
@@ -380,6 +383,9 @@ def run_single_dataset(
             f"{tester.dataset_name}/corr_fy": float(metrics["corr"][1]),
             f"{tester.dataset_name}/corr_fz": float(metrics["corr"][2]),
             f"{tester.dataset_name}/n_samples": int(metrics["n_samples"]),
+            f"{tester.dataset_name}/correlation": wandb.Image(correlation_plot_path),
+            f"{tester.dataset_name}/xyz_error": wandb.Image(xyz_error_plot_path),
+            f"{tester.dataset_name}/cone_error": wandb.Image(cone_error_plot_path),
             f"{tester.dataset_name}/force_magnitude_rmse": wandb.Image(mag_plot),
         }
         wandb_run.log(wandb_payload)
