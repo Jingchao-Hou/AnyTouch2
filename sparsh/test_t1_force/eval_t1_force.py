@@ -208,6 +208,29 @@ def load_scaled_outputs(tester, dataset):
     return forces_gt, forces_pred
 
 
+def compute_force_metrics(forces_gt: np.ndarray, forces_pred: np.ndarray):
+    per_sample_rmse = np.sqrt((forces_gt - forces_pred) ** 2).mean(axis=1)
+    rmse = float(per_sample_rmse.mean())
+    rmse_std = float(per_sample_rmse.std())
+    corr = np.array(
+        [
+            np.corrcoef(forces_gt[:, i], forces_pred[:, i])[0, 1]
+            for i in range(forces_gt.shape[1])
+        ],
+        dtype=np.float32,
+    )
+    sem = rmse_std / np.sqrt(forces_gt.shape[0])
+    ci95 = 1.96 * sem
+    return {
+        "rmse": rmse,
+        "rmse_std": rmse_std,
+        "corr": corr,
+        "sem": float(sem),
+        "ci95": float(ci95),
+        "n_samples": int(forces_gt.shape[0]),
+    }
+
+
 def make_force_magnitude_bar_plot(
     forces_gt: np.ndarray,
     forces_pred: np.ndarray,
@@ -361,6 +384,12 @@ def run_single_dataset(
                 wandb_payload[f"{tester.dataset_name}/force_mag_bin_{idx}_count"] = int(count)
         wandb_run.log(wandb_payload)
 
+    return {
+        "forces_gt": forces_gt,
+        "forces_pred": forces_pred,
+        "metrics": metrics if wandb_run is not None else None,
+    }
+
 
 def main():
     args = parse_args()
@@ -375,27 +404,29 @@ def main():
     wandb_run = init_eval_wandb(cfg, args.checkpoint)
 
     dataset_names = list(cfg.test.data.dataset_name)
+    collected_outputs = []
     for dataset_name in dataset_names:
         print(f"\nEvaluating {cfg.sensor} on {dataset_name}")
-        run_single_dataset(
+        result = run_single_dataset(
             cfg, model, dataset_name, args.checkpoint, args.device, wandb_run=wandb_run
         )
+        collected_outputs.append(result)
 
     if len(dataset_names) > 1:
-        tester = TestForceSL(device=args.device, module=model)
-        tester.set_test_params(
-            task=cfg.experiment_name,
-            sensor=cfg.sensor,
-            ckpt=extract_epoch_name(args.checkpoint),
-            dataset_name="all",
-            path_outputs=cfg.test.path_outputs,
-            config=cfg,
+        all_forces_gt = np.vstack([item["forces_gt"] for item in collected_outputs])
+        all_forces_pred = np.vstack([item["forces_pred"] for item in collected_outputs])
+        metrics = compute_force_metrics(all_forces_gt, all_forces_pred)
+        task_output_dir = os.path.join(cfg.test.path_outputs, cfg.experiment_name)
+        os.makedirs(task_output_dir, exist_ok=True)
+        epoch_num = int(extract_epoch_name(args.checkpoint).split("-")[-1].split(".")[0])
+        np.save(
+            os.path.join(task_output_dir, f"{epoch_num}_metrics.npy"),
+            metrics,
         )
-        tester.get_overall_metrics(build_dataset(cfg, dataset_names[0]), over_all_outputs=True)
-        metrics = np.load(
-            f"{tester.path_output_model}/{tester.epoch}_metrics.npy",
-            allow_pickle=True,
-        ).item()
+        print("Metrics for all outputs:")
+        print(f"RMSE: {metrics['rmse']} ± {metrics['rmse_std']} N")
+        print(f"Correlation: {metrics['corr']}")
+        print(f"Total samples: {metrics['n_samples']}")
         wandb_run.log(
             {
                 "all/rmse": float(metrics["rmse"]),
