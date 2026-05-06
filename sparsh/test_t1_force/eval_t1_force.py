@@ -4,6 +4,7 @@ import copy
 import os
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
 
 
@@ -140,10 +141,15 @@ def load_run_config(run_dir: str):
 def apply_runtime_overrides(cfg, args):
     data_root = str(Path(args.data_root).resolve())
     output_dir = str(Path(args.output_dir).resolve())
+    timestamp = datetime.now().strftime("%Y.%m.%d_%H-%M-%S")
+    run_output_dir = os.path.join(
+        output_dir,
+        f"{cfg.task_name}_{cfg.sensor}_{timestamp}",
+    )
 
     cfg.paths.data_root = data_root
-    cfg.paths.tacbench_dir = output_dir
-    cfg.paths.output_dir = output_dir
+    cfg.paths.tacbench_dir = run_output_dir
+    cfg.paths.output_dir = run_output_dir
     cfg.paths.work_dir = str(REPO_ROOT)
     if not os.path.isabs(cfg.ckpt_path):
         cfg.ckpt_path = str((REPO_ROOT / cfg.ckpt_path).resolve())
@@ -158,6 +164,7 @@ def apply_runtime_overrides(cfg, args):
     if args.batch_size is not None:
         cfg.test.data.batch_size = args.batch_size
 
+    cfg.test.path_outputs = os.path.join(run_output_dir, f"{cfg.task_name}_{cfg.sensor}")
     return cfg
 
 
