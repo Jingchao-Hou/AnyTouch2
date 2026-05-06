@@ -132,6 +132,7 @@ def apply_runtime_overrides(cfg, args):
     cfg.paths.data_root = data_root
     cfg.paths.tacbench_dir = output_dir
     cfg.paths.output_dir = output_dir
+    cfg.paths.work_dir = str(REPO_ROOT)
     if not os.path.isabs(cfg.ckpt_path):
         cfg.ckpt_path = str((REPO_ROOT / cfg.ckpt_path).resolve())
     cfg.data.dataset.config.path_dataset = os.path.join(
@@ -145,7 +146,6 @@ def apply_runtime_overrides(cfg, args):
     if args.batch_size is not None:
         cfg.test.data.batch_size = args.batch_size
 
-    OmegaConf.resolve(cfg)
     return cfg
 
 
