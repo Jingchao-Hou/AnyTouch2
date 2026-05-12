@@ -196,6 +196,11 @@ def main(args):
             misc.save_model(
                 args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
                 loss_scaler=loss_scaler, epoch=0)
+            
+        # Save last checkpoint
+        misc.save_model(
+            args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
+            loss_scaler=loss_scaler, epoch=epoch)
         
         print(f"RMSE of the network on the {len(dataset_val)} test images: {test_stats['rmse']:.2f}")
         min_loss = min(min_loss, test_stats["rmse"])
