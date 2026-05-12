@@ -208,6 +208,9 @@ def main(args):
         log_stats = {**{f'train_{k}': v for k, v in train_stats.items()},
                         **{f'test_{k}': v for k, v in test_stats.items()},
                         'epoch': epoch}
+        
+        if wandb_run is not None and misc.is_main_process():
+            wandb.log(log_stats, step=epoch)
 
         if args.output_dir and misc.is_main_process():
             if log_writer is not None:
