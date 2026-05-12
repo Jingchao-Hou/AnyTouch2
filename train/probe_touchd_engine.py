@@ -210,7 +210,7 @@ def evaluate(data_loader, model, device, args, epoch, wandb_run=None):
             "eval/rmse": metric_logger.meters["rmse"].global_avg,
             "eval/correlation": wandb.Image(correlation_path),
             "eval/epoch": epoch,
-        }, step=epoch)
+        }, step=(epoch + 1) * 1000)
 
 
     return {k: meter.global_avg for k, meter in metric_logger.meters.items()}

@@ -215,7 +215,7 @@ def main(args):
                         'epoch': epoch}
         
         if wandb_run is not None and misc.is_main_process():
-            wandb.log(log_stats, step=epoch)
+            wandb.log(log_stats, step=(epoch + 1) * 1000)
 
         if args.output_dir and misc.is_main_process():
             if log_writer is not None:
