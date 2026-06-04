@@ -112,6 +112,44 @@ def data_loader(data_root, sensors):
     return dataset
 
 
+def data_loader_single_frame(data_root, sensors, single_step_value, single_step_movements):
+    dataset = []
+    data_root = Path(data_root)
+    allowed_movements = set(single_step_movements)
+
+    for sensor in sensors:
+        movement_dir = data_root / "movement" / sensor
+        movement_json = movement_dir / f"{sensor}_move.json"
+        movement_images_dir = movement_dir / "images"
+        if not movement_json.exists() or not movement_images_dir.exists():
+            continue
+
+        with open(movement_json, "r") as f:
+            movement_data = json.load(f)
+
+        for frame_info in movement_data.get("frames", []):
+            if frame_info.get("movement") not in allowed_movements:
+                continue
+            if int(frame_info.get("movement_step", -1)) != single_step_value:
+                continue
+
+            frame_path = movement_images_dir / frame_info["frame"]
+            if not frame_path.exists():
+                continue
+
+            dataset.append(
+                {
+                    "sensor": sensor,
+                    "sequence": f"movement_{frame_info['movement']}_step_{single_step_value}",
+                    "frame_paths": [frame_path],
+                    "frame_metadata": [frame_info],
+                    "single_frame_mode": True,
+                }
+            )
+
+    return dataset
+
+
 def load_sensor_backgrounds(data_root, sensors):
     to_tensor = transforms.ToTensor()
     bg_paths = {
@@ -171,12 +209,38 @@ def save_metadata(rows, output_dir):
         writer.writerows(rows)
 
 
+def should_keep_window(metadata_slice, args):
+    if not args.single_step_mode:
+        return True
+    if metadata_slice is None:
+        return False
+
+    allowed_movements = set(args.single_step_movements)
+    movement = metadata_slice[-1]["movement"]
+    step_values = {int(item["movement_step"]) for item in metadata_slice}
+    return movement in allowed_movements and args.single_step_value in step_values
+
+
+def build_model_input_paths(clip_paths, args, is_single_frame_mode):
+    if is_single_frame_mode:
+        return clip_paths * args.num_frames
+    return clip_paths
+
+
 def main(args):
     device = torch.device(args.device)
     random_seed(args.seed)
     os.makedirs(args.output_dir, exist_ok=True)
 
-    dataset = data_loader(args.data_root, args.sensors)
+    if args.single_frame_mode:
+        dataset = data_loader_single_frame(
+            args.data_root,
+            args.sensors,
+            args.single_step_value,
+            args.single_step_movements,
+        )
+    else:
+        dataset = data_loader(args.data_root, args.sensors)
     backgrounds = load_sensor_backgrounds(args.data_root, args.sensors)
 
     model = build_model(args)
@@ -194,17 +258,38 @@ def main(args):
             sequence = sample["sequence"]
             frame_paths = sample["frame_paths"]
             frame_metadata = sample["frame_metadata"]
+            is_single_frame_mode = sample.get("single_frame_mode", False)
 
             print(f"Processing {sensor}/{sequence} with {len(frame_paths)} frames")
             sensor_id_tensor = torch.tensor(
                 [sensor_name_to_id[sensor]], dtype=torch.long, device=device
             )
 
-            for start_idx, clip_paths in iter_clip_windows(
-                frame_paths, args.num_frames, args.stride, args.window_step
-            ):
+            if is_single_frame_mode:
+                window_iter = [(0, frame_paths)]
+            else:
+                window_iter = iter_clip_windows(
+                    frame_paths, args.num_frames, args.stride, args.window_step
+                )
+
+            for start_idx, clip_paths in window_iter:
+                metadata_slice = None
+                if frame_metadata is not None:
+                    if is_single_frame_mode:
+                        metadata_slice = frame_metadata
+                    else:
+                        metadata_slice = frame_metadata[
+                            start_idx : start_idx + args.num_frames * args.stride : args.stride
+                        ]
+
+                if not should_keep_window(metadata_slice, args):
+                    continue
+
                 sensor_bg = backgrounds.get(sensor)
-                clip = preprocess_clip(clip_paths, sensor_bg).unsqueeze(0).to(device)
+                model_input_paths = build_model_input_paths(
+                    clip_paths, args, is_single_frame_mode
+                )
+                clip = preprocess_clip(model_input_paths, sensor_bg).unsqueeze(0).to(device)
                 outputs = model(clip, sensor_id_tensor)
 
                 cls_token = outputs[:, 0, :].squeeze(0).cpu().numpy()
@@ -212,11 +297,6 @@ def main(args):
 
                 all_cls.append(cls_token)
                 all_patch_mean.append(patch_mean)
-                metadata_slice = None
-                if frame_metadata is not None:
-                    metadata_slice = frame_metadata[
-                        start_idx : start_idx + args.num_frames * args.stride : args.stride
-                    ]
 
                 metadata_rows.append(
                     {
@@ -224,7 +304,7 @@ def main(args):
                         "sequence": sequence,
                         "start_frame_index": start_idx,
                         "frame_paths": "|".join(
-                            str(path.relative_to(args.data_root)) for path in clip_paths
+                            str(path.relative_to(args.data_root)) for path in model_input_paths
                         ),
                         "movement": "" if metadata_slice is None else metadata_slice[-1]["movement"],
                         "movement_steps": "" if metadata_slice is None else "|".join(
@@ -260,6 +340,28 @@ if __name__ == "__main__":
         "--sensors",
         nargs="+",
         default=["digit", "gelsight"]
+    )
+    parser.add_argument(
+        "--single_step_mode",
+        action="store_true",
+        help="Keep only clips whose movement is in --single_step_movements and whose movement_steps contain --single_step_value",
+    )
+    parser.add_argument(
+        "--single_step_value",
+        type=int,
+        default=14,
+        help="Target step value used when --single_step_mode is enabled",
+    )
+    parser.add_argument(
+        "--single_step_movements",
+        nargs="+",
+        default=["center", "right", "left", "down", "up"],
+        help="Allowed movements used when --single_step_mode is enabled",
+    )
+    parser.add_argument(
+        "--single_frame_mode",
+        action="store_true",
+        help="Use only the exact --single_step_value frame for each allowed movement and repeat it to match --num_frames",
     )
     args = parser.parse_args()
     main(args)

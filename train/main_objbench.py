@@ -85,7 +85,7 @@ def main(args):
         log_writer = None
         wandb_run = wandb.init(
             project="Objbench-AnyTouch2-New",
-            name=f"training-{args.dataset}-{args.data_sensor}",
+            name=f"test-{args.dataset}-{args.data_sensor}",
             dir=args.log_dir,
             config=vars(args),
         )
@@ -183,12 +183,12 @@ def main(args):
         if test_stats["acc1"] >= max_accuracy:
             misc.save_model(
                 args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-                loss_scaler=loss_scaler, epoch="best")
+                loss_scaler=loss_scaler, epoch=epoch, save_name="best", checkpoint_epoch=epoch)
 
         # save last model
         misc.save_model(
             args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-            loss_scaler=loss_scaler, epoch="last")
+            loss_scaler=loss_scaler, epoch=epoch, save_name="last", checkpoint_epoch=epoch)
         
         cloth_class_metrics = test_stats.pop("cloth_class_metrics", None)
 
