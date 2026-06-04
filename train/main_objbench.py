@@ -85,7 +85,7 @@ def main(args):
         log_writer = None
         wandb_run = wandb.init(
             project="Objbench-AnyTouch2-New",
-            name=f"test-{args.dataset}-{args.data_sensor}",
+            name=f"test-best-{args.dataset}-{args.data_sensor}",
             dir=args.log_dir,
             config=vars(args),
         )

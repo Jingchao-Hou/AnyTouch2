@@ -94,7 +94,7 @@ def main(args):
         os.makedirs(args.log_dir, exist_ok=True)
        
         wandb_run = wandb.init(
-            project="ToucHD-AnyTouch2",
+            project="ToucHD-AnyTouch2-New",
             name=f"Train-touchd-{args.data_sensor}-{added_time}-run",
             dir=args.log_dir,
             config=vars(args),
@@ -195,12 +195,14 @@ def main(args):
         if test_stats["rmse"] <= min_loss:
             misc.save_model(
                 args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-                loss_scaler=loss_scaler, epoch=0)
+                loss_scaler=loss_scaler, epoch=epoch,
+                save_name=f"{args.data_sensor}-best", checkpoint_epoch=epoch)
             
         # Save last checkpoint
         misc.save_model(
             args=args, model=model, model_without_ddp=model_without_ddp, optimizer=optimizer,
-            loss_scaler=loss_scaler, epoch=epoch)
+            loss_scaler=loss_scaler, epoch=epoch,
+            save_name=f"{args.data_sensor}-last", checkpoint_epoch=epoch)
         
         print(f"RMSE of the network on the {len(dataset_val)} test images: {test_stats['rmse']:.2f}")
         min_loss = min(min_loss, test_stats["rmse"])
