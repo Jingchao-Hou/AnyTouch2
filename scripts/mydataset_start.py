@@ -1,4 +1,5 @@
 import csv
+import json
 import os
 import sys
 from pathlib import Path
@@ -62,13 +63,51 @@ def build_model(args):
 
 def data_loader(data_root, sensors):
     dataset = []
+    data_root = Path(data_root)
+
     for sensor in sensors:
-        sensor_dir = Path(data_root) / sensor
-        for clip_dir in sorted(path for path in sensor_dir.iterdir() if path.is_dir()):
-            frames_dir = clip_dir / "video_frames"
-            frame_paths = sorted(frames_dir.glob("*.png"))
+        movement_dir = data_root / "movement" / sensor
+        movement_json = movement_dir / f"{sensor}_move.json"
+        movement_images_dir = movement_dir / "images"
+        if movement_json.exists() and movement_images_dir.exists():
+            with open(movement_json, "r") as f:
+                movement_data = json.load(f)
+
+            frames = movement_data.get("frames", [])
+            frame_paths = []
+            frame_metadata = []
+            for frame_info in frames:
+                frame_path = movement_images_dir / frame_info["frame"]
+                if not frame_path.exists():
+                    continue
+                frame_paths.append(frame_path)
+                frame_metadata.append(frame_info)
+
             if frame_paths:
-                dataset.append((sensor, clip_dir, frame_paths))
+                dataset.append(
+                    {
+                        "sensor": sensor,
+                        "sequence": "movement",
+                        "frame_paths": frame_paths,
+                        "frame_metadata": frame_metadata,
+                    }
+                )
+
+        # sensor_dir = data_root / sensor
+        # if not sensor_dir.exists():
+        #     continue
+        # for clip_dir in sorted(path for path in sensor_dir.iterdir() if path.is_dir()):
+        #     frames_dir = clip_dir / "video_frames"
+        #     frame_paths = sorted(frames_dir.glob("*.png"))
+        #     if frame_paths:
+        #         dataset.append(
+        #             {
+        #                 "sensor": sensor,
+        #                 "sequence": clip_dir.name,
+        #                 "frame_paths": frame_paths,
+        #                 "frame_metadata": None,
+        #             }
+        #         )
 
     return dataset
 
@@ -116,7 +155,17 @@ def save_metadata(rows, output_dir):
     with open(metadata_path, "w", newline="") as f:
         writer = csv.DictWriter(
             f,
-            fieldnames=["sensor", "sequence", "start_frame_index", "frame_paths"],
+            fieldnames=[
+                "sensor",
+                "sequence",
+                "start_frame_index",
+                "frame_paths",
+                "movement",
+                "movement_steps",
+                "fx",
+                "fy",
+                "fz",
+            ],
         )
         writer.writeheader()
         writer.writerows(rows)
@@ -140,8 +189,13 @@ def main(args):
     total_windows = 0
 
     with torch.no_grad():
-        for sensor, clip_dir, frame_paths in dataset:
-            print(f"Processing {sensor}/{clip_dir.name} with {len(frame_paths)} frames")
+        for sample in dataset:
+            sensor = sample["sensor"]
+            sequence = sample["sequence"]
+            frame_paths = sample["frame_paths"]
+            frame_metadata = sample["frame_metadata"]
+
+            print(f"Processing {sensor}/{sequence} with {len(frame_paths)} frames")
             sensor_id_tensor = torch.tensor(
                 [sensor_name_to_id[sensor]], dtype=torch.long, device=device
             )
@@ -158,14 +212,27 @@ def main(args):
 
                 all_cls.append(cls_token)
                 all_patch_mean.append(patch_mean)
+                metadata_slice = None
+                if frame_metadata is not None:
+                    metadata_slice = frame_metadata[
+                        start_idx : start_idx + args.num_frames * args.stride : args.stride
+                    ]
+
                 metadata_rows.append(
                     {
                         "sensor": sensor,
-                        "sequence": clip_dir.name,
+                        "sequence": sequence,
                         "start_frame_index": start_idx,
                         "frame_paths": "|".join(
                             str(path.relative_to(args.data_root)) for path in clip_paths
                         ),
+                        "movement": "" if metadata_slice is None else metadata_slice[-1]["movement"],
+                        "movement_steps": "" if metadata_slice is None else "|".join(
+                            str(item["movement_step"]) for item in metadata_slice
+                        ),
+                        "fx": "" if metadata_slice is None else metadata_slice[-1]["fx"],
+                        "fy": "" if metadata_slice is None else metadata_slice[-1]["fy"],
+                        "fz": "" if metadata_slice is None else metadata_slice[-1]["fz"],
                     }
                 )
                 total_windows += 1

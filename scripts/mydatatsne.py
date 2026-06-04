@@ -1,4 +1,6 @@
 import csv
+from pathlib import Path
+
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
@@ -16,7 +18,9 @@ with open(meta_path, "r") as f:
     for row in reader:
         labels.append(row["sensor"])
 
-tsne = TSNE(n_components=2,random_state=0)
+Path(out_path).parent.mkdir(parents=True, exist_ok=True)
+
+tsne = TSNE(n_components=2, random_state=0,perplexity=50)
 X_2d = tsne.fit_transform(X)
 print(f"The shape after the fit transform {X_2d.shape}")
 
@@ -26,13 +30,13 @@ colors = {
 }
 
 plt.figure(figsize=(8, 6))
-for sensor in ["digit", "gelsight"]:
+for sensor in sorted(set(labels)):
     idx = [i for i, x in enumerate(labels) if x == sensor]
     plt.scatter(
         X_2d[idx, 0],
         X_2d[idx, 1],
         s=5,
-        c=colors[sensor],
+        c=colors.get(sensor, "gray"),
         label=sensor,
         alpha=0.8,
     )
