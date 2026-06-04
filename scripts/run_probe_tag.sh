@@ -13,6 +13,6 @@ CUDA_VISIBLE_DEVICES=0 python -u -m torch.distributed.launch --master_port=21634
     --load_path checkpoints/checkpoint-4frames.pth \
     --num_frames 4 \
     --stride 2 \
-    --model anytouch
-
-    
+    --model anytouch \
+    --eval \
+    --resume log/tag-2026-06-04_17-06-30/checkpoint-best.pth

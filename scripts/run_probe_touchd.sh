@@ -14,7 +14,7 @@ CUDA_VISIBLE_DEVICES=0 python -u -m torch.distributed.launch --master_port=13934
     --num_frames 4 \
     --stride 2 \
     --model anytouch \
-    --data_sensor gelsight \
+    --data_sensor digit \
     # --resume_downstream checkpoints/checkpoint-4frames-touchd-gelsight.pth \
     # --eval \
     

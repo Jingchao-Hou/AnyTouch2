@@ -15,4 +15,4 @@ CUDA_VISIBLE_DEVICES=0 python -u -m torch.distributed.launch --master_port=11634
     --stride 2 \
     --model anytouch \
     --eval \
-    --resume log/cloth-2026-06-04_16-33-46/checkpoint-last.pth
+    --resume log/cloth-2026-06-04_16-33-46/checkpoint-best.pth
