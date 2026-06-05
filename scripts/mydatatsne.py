@@ -150,7 +150,7 @@ with open(ordered_meta_path, "r") as f:
         ordered_labels.append(row["sensor"])
         ordered_steps.append(row["sequence"].split("_")[-1])
 
-X_ordered_2d = TSNE(n_components=2, random_state=0, perplexity=2).fit_transform(X_ordered)
+X_ordered_2d = TSNE(n_components=2, random_state=0, perplexity=3).fit_transform(X_ordered)
 print(f"The shape after the ordered-step fit transform {X_ordered_2d.shape}")
 
 step_colors = {
@@ -161,13 +161,12 @@ step_colors = {
 plt.figure(figsize=(8, 6))
 for sensor in sorted(set(ordered_labels)):
     for step in ["15", "16"]:
-        idx = [
-            i
-            for i, (sensor_label, step_label) in enumerate(
-                zip(ordered_labels, ordered_steps)
-            )
-            if sensor_label == sensor and step_label == step
-        ]
+        idx = []
+        for i, (sensor_label, step_label) in enumerate(
+            zip(ordered_labels, ordered_steps)
+        ):
+            if sensor_label == sensor and step_label == step:
+                idx.append(i)
         if not idx:
             continue
         plt.scatter(
@@ -181,7 +180,7 @@ for sensor in sorted(set(ordered_labels)):
         )
 
 plt.legend(ncol=2, fontsize=7)
-plt.title("t-SNE of Ordered Clips by Sensor and Step")
+plt.title("t-SNE of up center down right")
 plt.tight_layout()
 plt.savefig(ordered_movement_out_path)
 print(f"Saved to {ordered_movement_out_path}")
