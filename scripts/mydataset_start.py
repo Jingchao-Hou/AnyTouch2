@@ -143,7 +143,46 @@ def data_loader_single_frame(data_root, sensors, single_step_value, single_step_
                     "sequence": f"movement_{frame_info['movement']}_step_{single_step_value}",
                     "frame_paths": [frame_path],
                     "frame_metadata": [frame_info],
-                    "single_frame_mode": True,
+                    "direct_clip_mode": "single_frame",
+                }
+            )
+
+    return dataset
+
+
+def data_loader_ordered_steps(data_root, sensors, ordered_step_values, ordered_step_movements):
+    dataset = []
+    data_root = Path(data_root)
+
+    for sensor in sensors:
+        movement_dir = data_root / "movement" / sensor
+        movement_json = movement_dir / f"{sensor}_move.json"
+        movement_images_dir = movement_dir / "images"
+
+        with open(movement_json, "r") as f:
+            movement_data = json.load(f)
+
+        frame_lookup = {}
+        for frame_info in movement_data.get("frames", []):
+            movement = frame_info.get("movement")
+            step_value = int(frame_info.get("movement_step", -1))
+            frame_lookup[(movement, step_value)] = frame_info
+
+        for step_value in ordered_step_values:
+            frame_metadata = [
+                frame_lookup[(movement, step_value)] for movement in ordered_step_movements
+            ]
+            frame_paths = [
+                movement_images_dir / frame_info["frame"] for frame_info in frame_metadata
+            ]
+
+            dataset.append(
+                {
+                    "sensor": sensor,
+                    "sequence": f"ordered_step_{step_value}",
+                    "frame_paths": frame_paths,
+                    "frame_metadata": frame_metadata,
+                    "direct_clip_mode": "prebuilt_clip",
                 }
             )
 
@@ -232,7 +271,14 @@ def main(args):
     random_seed(args.seed)
     os.makedirs(args.output_dir, exist_ok=True)
 
-    if args.single_frame_mode:
+    if args.ordered_step_mode:
+        dataset = data_loader_ordered_steps(
+            args.data_root,
+            args.sensors,
+            args.ordered_step_values,
+            args.ordered_step_movements,
+        )
+    elif args.single_frame_mode:
         dataset = data_loader_single_frame(
             args.data_root,
             args.sensors,
@@ -258,14 +304,15 @@ def main(args):
             sequence = sample["sequence"]
             frame_paths = sample["frame_paths"]
             frame_metadata = sample["frame_metadata"]
-            is_single_frame_mode = sample.get("single_frame_mode", False)
+            direct_clip_mode = sample.get("direct_clip_mode")
+            is_direct_clip_mode = direct_clip_mode is not None
 
             print(f"Processing {sensor}/{sequence} with {len(frame_paths)} frames")
             sensor_id_tensor = torch.tensor(
                 [sensor_name_to_id[sensor]], dtype=torch.long, device=device
             )
 
-            if is_single_frame_mode:
+            if is_direct_clip_mode:
                 window_iter = [(0, frame_paths)]
             else:
                 window_iter = iter_clip_windows(
@@ -275,7 +322,7 @@ def main(args):
             for start_idx, clip_paths in window_iter:
                 metadata_slice = None
                 if frame_metadata is not None:
-                    if is_single_frame_mode:
+                    if is_direct_clip_mode:
                         metadata_slice = frame_metadata
                     else:
                         metadata_slice = frame_metadata[
@@ -287,16 +334,33 @@ def main(args):
 
                 sensor_bg = backgrounds.get(sensor)
                 model_input_paths = build_model_input_paths(
-                    clip_paths, args, is_single_frame_mode
+                    clip_paths, args, direct_clip_mode == "single_frame"
                 )
                 clip = preprocess_clip(model_input_paths, sensor_bg).unsqueeze(0).to(device)
                 outputs = model(clip, sensor_id_tensor)
-
+                print(f"output: {outputs.shape}")
                 cls_token = outputs[:, 0, :].squeeze(0).cpu().numpy()
                 patch_mean = outputs[:, 6:, :].mean(dim=1).squeeze(0).cpu().numpy()
 
                 all_cls.append(cls_token)
                 all_patch_mean.append(patch_mean)
+
+                movement_value = ""
+                movement_steps_value = ""
+                fx_value = ""
+                fy_value = ""
+                fz_value = ""
+                if metadata_slice is not None:
+                    if direct_clip_mode == "prebuilt_clip":
+                        movement_value = "|".join(item["movement"] for item in metadata_slice)
+                    else:
+                        movement_value = metadata_slice[-1]["movement"]
+                    movement_steps_value = "|".join(
+                        str(item["movement_step"]) for item in metadata_slice
+                    )
+                    fx_value = metadata_slice[-1]["fx"]
+                    fy_value = metadata_slice[-1]["fy"]
+                    fz_value = metadata_slice[-1]["fz"]
 
                 metadata_rows.append(
                     {
@@ -306,13 +370,11 @@ def main(args):
                         "frame_paths": "|".join(
                             str(path.relative_to(args.data_root)) for path in model_input_paths
                         ),
-                        "movement": "" if metadata_slice is None else metadata_slice[-1]["movement"],
-                        "movement_steps": "" if metadata_slice is None else "|".join(
-                            str(item["movement_step"]) for item in metadata_slice
-                        ),
-                        "fx": "" if metadata_slice is None else metadata_slice[-1]["fx"],
-                        "fy": "" if metadata_slice is None else metadata_slice[-1]["fy"],
-                        "fz": "" if metadata_slice is None else metadata_slice[-1]["fz"],
+                        "movement": movement_value,
+                        "movement_steps": movement_steps_value,
+                        "fx": fx_value,
+                        "fy": fy_value,
+                        "fz": fz_value,
                     }
                 )
                 total_windows += 1
@@ -362,6 +424,24 @@ if __name__ == "__main__":
         "--single_frame_mode",
         action="store_true",
         help="Use only the exact --single_step_value frame for each allowed movement and repeat it to match --num_frames",
+    )
+    parser.add_argument(
+        "--ordered_step_mode",
+        action="store_true",
+        help="Load single-frame samples in sensor/movement/step order using --ordered_step_movements and --ordered_step_values",
+    )
+    parser.add_argument(
+        "--ordered_step_values",
+        nargs="+",
+        type=int,
+        default=[15, 16],
+        help="Step values used when --ordered_step_mode is enabled",
+    )
+    parser.add_argument(
+        "--ordered_step_movements",
+        nargs="+",
+        default=["up", "center", "down", "right"],
+        help="Movement order used when --ordered_step_mode is enabled",
     )
     args = parser.parse_args()
     main(args)

@@ -12,6 +12,9 @@ movement_out_path = "log/mydataset_start/tsne_cls_sensor_movement.png"
 frame14_feature_path = "log/mydataset_start_frame14/cls_features.npy"
 frame14_meta_path = "log/mydataset_start_frame14/metadata.csv"
 frame14_movement_out_path = "log/mydataset_start_frame14/tsne_cls_sensor_movement.png"
+ordered_feature_path = "log/mydataset_ordered_15_16/cls_features.npy"
+ordered_meta_path = "log/mydataset_ordered_15_16/metadata.csv"
+ordered_movement_out_path = "log/mydataset_ordered_15_16/tsne_cls_sensor_movement.png"
 
 X = np.load(feature_path)
 print(f"The shape of the representation  {X.shape}")
@@ -67,7 +70,7 @@ sensor_markers = {
 }
 
 target_movements = ["center", "right", "left", "down", "up"]
-
+###########################
 plt.figure(figsize=(8, 6))
 for sensor in sorted(set(labels)):
     for movement in target_movements:
@@ -135,3 +138,50 @@ plt.title("t-SNE of Step-14 CLS Features by Sensor and Movement")
 plt.tight_layout()
 plt.savefig(frame14_movement_out_path)
 print(f"Saved to {frame14_movement_out_path}")
+
+X_ordered = np.load(ordered_feature_path)
+print(f"The shape of the ordered-step representation {X_ordered.shape}")
+
+ordered_labels = []
+ordered_steps = []
+with open(ordered_meta_path, "r") as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        ordered_labels.append(row["sensor"])
+        ordered_steps.append(row["sequence"].split("_")[-1])
+
+X_ordered_2d = TSNE(n_components=2, random_state=0, perplexity=2).fit_transform(X_ordered)
+print(f"The shape after the ordered-step fit transform {X_ordered_2d.shape}")
+
+step_colors = {
+    "15": "tab:blue",
+    "16": "tab:orange",
+}
+
+plt.figure(figsize=(8, 6))
+for sensor in sorted(set(ordered_labels)):
+    for step in ["15", "16"]:
+        idx = [
+            i
+            for i, (sensor_label, step_label) in enumerate(
+                zip(ordered_labels, ordered_steps)
+            )
+            if sensor_label == sensor and step_label == step
+        ]
+        if not idx:
+            continue
+        plt.scatter(
+            X_ordered_2d[idx, 0],
+            X_ordered_2d[idx, 1],
+            s=40,
+            c=step_colors.get(step, "gray"),
+            marker=sensor_markers.get(sensor, "o"),
+            label=f"{sensor}-step{step}",
+            alpha=0.8,
+        )
+
+plt.legend(ncol=2, fontsize=7)
+plt.title("t-SNE of Ordered Clips by Sensor and Step")
+plt.tight_layout()
+plt.savefig(ordered_movement_out_path)
+print(f"Saved to {ordered_movement_out_path}")

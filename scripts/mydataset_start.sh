@@ -10,8 +10,23 @@
 #     --sensors digit gelsight
 
 # Exact step-14 frame extraction. The same frame is repeated to match the 4-frame model input.
+# CUDA_VISIBLE_DEVICES=0 python3 -u scripts/mydataset_start.py \
+#     --output_dir log/mydataset_start_frame14 \
+#     --data_root mydataset \
+#     --model_size base \
+#     --load_path checkpoints/checkpoint-4frames.pth \
+#     --num_frames 4 \
+#     --stride 2 \
+#     --window_step 1 \
+#     --model anytouch \
+#     --sensors digit gelsight \
+#     --single_step_mode \
+#     --single_step_value 14 \
+#     --single_step_movements center right left down up \
+#     --single_frame_mode
+
 CUDA_VISIBLE_DEVICES=0 python3 -u scripts/mydataset_start.py \
-    --output_dir log/mydataset_start_frame14 \
+    --output_dir log/mydataset_ordered_15_16 \
     --data_root mydataset \
     --model_size base \
     --load_path checkpoints/checkpoint-4frames.pth \
@@ -20,7 +35,6 @@ CUDA_VISIBLE_DEVICES=0 python3 -u scripts/mydataset_start.py \
     --window_step 1 \
     --model anytouch \
     --sensors digit gelsight \
-    --single_step_mode \
-    --single_step_value 14 \
-    --single_step_movements center right left down up \
-    --single_frame_mode
+    --ordered_step_mode \
+    --ordered_step_values 15 16 \
+    --ordered_step_movements up center down right
