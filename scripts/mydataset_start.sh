@@ -37,4 +37,4 @@ CUDA_VISIBLE_DEVICES=0 python3 -u scripts/mydataset_start.py \
     --sensors digit gelsight \
     --ordered_step_mode \
     --ordered_step_values 15 16 \
-    --ordered_step_movements up center down right
+    --ordered_step_movements up center down left

@@ -12,9 +12,9 @@ movement_out_path = "log/mydataset_start/tsne_cls_sensor_movement.png"
 frame14_feature_path = "log/mydataset_start_frame14/cls_features.npy"
 frame14_meta_path = "log/mydataset_start_frame14/metadata.csv"
 frame14_movement_out_path = "log/mydataset_start_frame14/tsne_cls_sensor_movement.png"
-ordered_feature_path = "log/mydataset_ordered_15_16/cls_features.npy"
+ordered_feature_path = "log/mydataset_ordered_15_16/cls_features_left.npy"
 ordered_meta_path = "log/mydataset_ordered_15_16/metadata.csv"
-ordered_movement_out_path = "log/mydataset_ordered_15_16/tsne_cls_sensor_movement.png"
+ordered_movement_out_path = "log/mydataset_ordered_15_16/tsne_cls_sensor_movement_left.png"
 
 X = np.load(feature_path)
 print(f"The shape of the representation  {X.shape}")
@@ -180,7 +180,7 @@ for sensor in sorted(set(ordered_labels)):
         )
 
 plt.legend(ncol=2, fontsize=7)
-plt.title("t-SNE of up center down right")
+plt.title("t-SNE of up center down left")
 plt.tight_layout()
 plt.savefig(ordered_movement_out_path)
 print(f"Saved to {ordered_movement_out_path}")

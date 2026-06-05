@@ -379,18 +379,18 @@ def main(args):
                 )
                 total_windows += 1
 
-    np.save(Path(args.output_dir) / "cls_features.npy", np.stack(all_cls, axis=0))
+    np.save(Path(args.output_dir) / "cls_features_left.npy", np.stack(all_cls, axis=0))
     np.save(
-        Path(args.output_dir) / "patch_mean_features.npy",
+        Path(args.output_dir) / "patch_mean_features_left.npy",
         np.stack(all_patch_mean, axis=0),
     )
     save_metadata(metadata_rows, args.output_dir)
 
     print(f"Processed dataset: {len(dataset)}")
     print(f"Extracted clips: {total_windows}")
-    print(f"Saved CLS features to: {Path(args.output_dir) / 'cls_features.npy'}")
-    print(f"Saved patch-mean features to: {Path(args.output_dir) / 'patch_mean_features.npy'}")
-    print(f"Saved metadata to: {Path(args.output_dir) / 'metadata.csv'}")
+    print(f"Saved CLS features to: {Path(args.output_dir) / 'cls_features_left.npy'}")
+    print(f"Saved patch-mean features to: {Path(args.output_dir) / 'patch_mean_features_left.npy'}")
+    print(f"Saved metadata to: {Path(args.output_dir) / 'metadata_left.csv'}")
 
 
 if __name__ == "__main__":
