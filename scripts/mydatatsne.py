@@ -12,9 +12,9 @@ movement_out_path = "log/mydataset_start/tsne_cls_sensor_movement.png"
 frame14_feature_path = "log/mydataset_start_frame14/cls_features.npy"
 frame14_meta_path = "log/mydataset_start_frame14/metadata.csv"
 frame14_movement_out_path = "log/mydataset_start_frame14/tsne_cls_sensor_movement.png"
-ordered_feature_path = "log/mydataset_ordered_15_16/cls_features_left.npy"
+ordered_feature_path = "log/mydataset_ordered_15_16/cls_features_right.npy"
 ordered_meta_path = "log/mydataset_ordered_15_16/metadata.csv"
-ordered_movement_out_path = "log/mydataset_ordered_15_16/tsne_cls_sensor_movement_left.png"
+ordered_movement_out_path = "log/mydataset_ordered_15_16/tsne_cls_sensor_movement_right.png"
 
 X = np.load(feature_path)
 print(f"The shape of the representation  {X.shape}")
@@ -160,7 +160,7 @@ step_colors = {
 
 plt.figure(figsize=(8, 6))
 for sensor in sorted(set(ordered_labels)):
-    for step in ["15", "16"]:
+    for step in ["15", "16","17","18"]:
         idx = []
         for i, (sensor_label, step_label) in enumerate(
             zip(ordered_labels, ordered_steps)

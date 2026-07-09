@@ -223,6 +223,7 @@ def preprocess_clip(frame_paths, sensor_bg):
     frames = [to_tensor(Image.open(path).convert("RGB")) for path in frame_paths]
     clip = torch.stack(frames, dim=0)
     clip = clip - sensor_bg + offset
+    
     clip = torch.clamp(clip, 0.0, 1.0)
     return transform(clip)
 
@@ -337,6 +338,7 @@ def main(args):
                     clip_paths, args, direct_clip_mode == "single_frame"
                 )
                 clip = preprocess_clip(model_input_paths, sensor_bg).unsqueeze(0).to(device)
+
                 outputs = model(clip, sensor_id_tensor)
                 print(f"output: {outputs.shape}")
                 cls_token = outputs[:, 0, :].squeeze(0).cpu().numpy()
@@ -379,18 +381,18 @@ def main(args):
                 )
                 total_windows += 1
 
-    np.save(Path(args.output_dir) / "cls_features_left.npy", np.stack(all_cls, axis=0))
+    np.save(Path(args.output_dir) / "cls_features_right.npy", np.stack(all_cls, axis=0))
     np.save(
-        Path(args.output_dir) / "patch_mean_features_left.npy",
+        Path(args.output_dir) / "patch_mean_features_right.npy",
         np.stack(all_patch_mean, axis=0),
     )
     save_metadata(metadata_rows, args.output_dir)
 
     print(f"Processed dataset: {len(dataset)}")
     print(f"Extracted clips: {total_windows}")
-    print(f"Saved CLS features to: {Path(args.output_dir) / 'cls_features_left.npy'}")
-    print(f"Saved patch-mean features to: {Path(args.output_dir) / 'patch_mean_features_left.npy'}")
-    print(f"Saved metadata to: {Path(args.output_dir) / 'metadata_left.csv'}")
+    print(f"Saved CLS features to: {Path(args.output_dir) / 'cls_features_right.npy'}")
+    print(f"Saved patch-mean features to: {Path(args.output_dir) / 'patch_mean_features_right.npy'}")
+    print(f"Saved metadata to: {Path(args.output_dir) / 'metadata.csv'}")
 
 
 if __name__ == "__main__":
